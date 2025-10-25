@@ -58,9 +58,12 @@ def main():
             f"Yarkon camping has no availablity for {target_date} :("
         )
         send_telegram_message(BOT_TOKEN, CHAT_ID, message)
+    print(message)
+
 
 if __name__ == "__main__":
     main()
+
 
 
 
