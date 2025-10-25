@@ -2,8 +2,8 @@ name: Yarkon Telegram Alert
 
 on:
   schedule:
-    - cron: '0 * * * *'  # every hour on the hour (UTC)
-  workflow_dispatch:      # allows manual trigger
+    - cron: '*/30 * * * *'  # every 30 minutes (UTC)
+  workflow_dispatch:        # manual trigger
 
 jobs:
   run-script:
