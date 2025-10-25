@@ -53,7 +53,13 @@ def main():
             f"Book now: https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-ירקון/"
         )
         send_telegram_message(BOT_TOKEN, CHAT_ID, message)
+    else
+        message = (
+            f"Yarkon camping has no availablity for {target_date} :("
+        )
+        send_telegram_message(BOT_TOKEN, CHAT_ID, message)
 
 if __name__ == "__main__":
     main()
+
 
