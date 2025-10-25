@@ -26,4 +26,4 @@ jobs:
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python yarkon_telegram_alert.py
+      run: python parksTelegramBot.py
