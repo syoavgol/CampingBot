@@ -1,9 +1,10 @@
 import cloudscraper
 from datetime import datetime
 import requests
+import os
 
-BOT_TOKEN = "8438859444:AAG1x7EPMIfDNPM-F1tk-TFNZIH_ZRZkNX0"
-CHAT_ID = "1135657528"
+BOT_TOKEN = os.environ["TG_BOT_TOKEN"]
+CHAT_ID = os.environ["TG_CHAT_ID"]
 
 def check_yarkon_availability(target_date="2025-11-14"):
     """Check if a specific date is available at Yarkon camping"""
@@ -55,3 +56,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
