@@ -29,6 +29,7 @@ def check_yarkon_availability(target_date="2025-11-14"):
             date = datetime.utcfromtimestamp(date_ms / 1000)
             date_str = date.strftime("%Y-%m-%d")
             if date_str == target_date and day["IsAvail"]:
+                print(day)
                 return True, date_str
         return False, None
     except Exception as e:
@@ -63,6 +64,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
