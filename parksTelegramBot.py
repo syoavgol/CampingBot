@@ -29,11 +29,12 @@ def check_yarkon_availability(target_date="2025-11-14"):
             date = datetime.utcfromtimestamp(date_ms / 1000)
             date_str = date.strftime("%Y-%m-%d")
             if date_str == target_date and day["IsAvail"]:
-                return True, date_str
-        return False, None
+                rooms = day.get("SumRoomsForSale", "N/A")
+                return True, date_str, rooms
+        return False, None, None
     except Exception as e:
         print(f"Error checking availability: {e}")
-        return False, None
+        return False, None, None
 
 def send_telegram_message(bot_token, chat_id, message):
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -46,20 +47,19 @@ def send_telegram_message(bot_token, chat_id, message):
 
 def main():
     target_date = "2025-11-14"
-    is_available, date = check_yarkon_availability(target_date)
+    is_available, date, rooms = check_yarkon_availability(target_date)
     if is_available:
         message = (
             f"Yarkon camping is available for {date}!\n"
+            f"Number of available reservations: {rooms}\n"
             f"Book now: https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-ירקון/"
         )
         send_telegram_message(BOT_TOKEN, CHAT_ID, message)
     else:
         message = (
-            f"Yarkon camping has no availablity for {target_date} :("
+            f"Yarkon camping has no availability for {target_date} :("
         )
     print(message)
 
 if __name__ == "__main__":
     main()
-
-
