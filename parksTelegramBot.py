@@ -5,13 +5,12 @@ import os
 
 BOT_TOKEN = os.environ["TG_BOT_TOKEN"]
 CHAT_ID = os.environ["TG_CHAT_ID"]
-HOTEL_ID = os.environ["PARKS_HOTEL_ID"]
 
 def check_yarkon_availability(target_date="2025-11-14"):
     """Check if a specific date is available at camping"""
     url = "https://secure-hotels.net/INPA/BE_Engine.aspx/getAvalibility"
     payload = {
-        "hotelID": HOTEL_ID,
+        "hotelID": "9",
         "dsn": "",
         "lang": "heb",
         "days": 365,
@@ -64,4 +63,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
