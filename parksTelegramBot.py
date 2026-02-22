@@ -5,12 +5,13 @@ import os
 
 BOT_TOKEN = os.environ["TG_BOT_TOKEN"]
 CHAT_ID = os.environ["TG_CHAT_ID"]
+HOTEL_ID = os.environ["PARKS_HOTEL_ID"]
 
 def check_yarkon_availability(target_date="2025-11-14"):
-    """Check if a specific date is available at Yarkon camping"""
+    """Check if a specific date is available at camping"""
     url = "https://secure-hotels.net/INPA/BE_Engine.aspx/getAvalibility"
     payload = {
-        "hotelID": "22",
+        "hotelID": HOTEL_ID,
         "dsn": "",
         "lang": "heb",
         "days": 365,
@@ -46,13 +47,13 @@ def send_telegram_message(bot_token, chat_id, message):
     return r.status_code == 200
 
 def main():
-    target_date = "2025-11-14"
+    target_date = {"2026-04-02", "2026-04-03", "2026-04-04"}
     is_available, date, rooms = check_yarkon_availability(target_date)
     if is_available:
         message = (
             f"Yarkon camping is available for {date}!\n"
             f"Number of available reservations: {rooms}\n"
-            f"Book now: https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-ירקון/"
+            f"Book now: https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-חורשת-טל/"
         )
         send_telegram_message(BOT_TOKEN, CHAT_ID, message)
     else:
@@ -63,3 +64,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
