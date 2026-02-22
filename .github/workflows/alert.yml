@@ -26,4 +26,5 @@ jobs:
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        TG_HOTEL_ID: ${{ secrets.TG_HOTEL_ID }}
       run: python parksTelegramBot.py
