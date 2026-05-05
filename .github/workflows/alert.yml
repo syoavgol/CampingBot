@@ -22,8 +22,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install cloudscraper requests
 
+    # TARGET_DATES: add Actions secret or variable named TARGET_DATES (comma-separated YYYY-MM-DD)
     - name: Run script
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        TARGET_DATES: ${{ secrets.TARGET_DATES || vars.TARGET_DATES }}
       run: python parksTelegramBot.py
