@@ -14,6 +14,37 @@ import traceback
 
 
 
+HOTEL_CONFIGS = {
+    "9": {
+        "name": "חורשת טל",
+        "booking_url": "https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-חורשת-טל/",
+    },
+    "20": {
+        "name": "הקסטל",
+        "booking_url": "https://www.parks.org.il/camping/חניון-לילה-הקסטל/",
+    },
+    "22": {
+        "name": "מקורות הירקון",
+        "booking_url": "https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-ירקון/",
+    },
+}
+
+
+def resolve_hotel_config(hotel_id):
+
+    cfg = HOTEL_CONFIGS.get(hotel_id)
+
+    if cfg is None:
+
+        known_ids = ", ".join(sorted(HOTEL_CONFIGS.keys()))
+
+        raise ValueError(
+            f"HOTEL_ID '{hotel_id}' is not configured. Known HOTEL_ID values: {known_ids}"
+        )
+
+    return cfg
+
+
 def _log(msg):
 
     print(f"[CampingBot] {msg}", flush=True)
@@ -26,7 +57,7 @@ def load_config():
 
     """Read env vars with clear logging; exits if required vars are missing."""
 
-    required = ("TG_BOT_TOKEN", "TG_CHAT_ID", "TARGET_DATES")
+    required = ("TG_BOT_TOKEN", "TG_CHAT_ID", "TARGET_DATES", "HOTEL_ID")
 
     missing = [k for k in required if not os.environ.get(k)]
 
@@ -51,12 +82,15 @@ def load_config():
     token = os.environ["TG_BOT_TOKEN"]
 
     chat_id = os.environ["TG_CHAT_ID"]
+    raw_hotel_ids = os.environ["HOTEL_ID"]
+    hotel_ids = _parse_hotel_ids(raw_hotel_ids)
 
     _log(f"TG_BOT_TOKEN present (length {len(token)})")
 
     _log(f"TG_CHAT_ID present (length {len(chat_id)})")
+    _log(f"HOTEL_ID parsed {len(hotel_ids)} value(s): {hotel_ids}")
 
-    return token, chat_id, target_dates
+    return token, chat_id, target_dates, hotel_ids
 
 
 
@@ -92,15 +126,44 @@ def _parse_target_dates(raw):
 
 
 
-def _fetch_yarkon_availability_days():
+def _parse_hotel_ids(raw):
 
-    """Fetch availability rows from the Yarkon camping API, or None on failure."""
+    hotel_ids = []
+
+    seen = set()
+
+    for part in raw.split(","):
+
+        hotel_id = part.strip()
+
+        if hotel_id and hotel_id not in seen:
+
+            seen.add(hotel_id)
+
+            hotel_ids.append(hotel_id)
+
+    if not hotel_ids:
+
+        raise ValueError(
+
+            "HOTEL_ID must list at least one value as comma-separated IDs (for example: 22,23)"
+
+        )
+
+    return hotel_ids
+
+
+
+
+def _fetch_availability_days(hotel_id):
+
+    """Fetch availability rows from the camping API, or None on failure."""
 
     url = "https://secure-hotels.net/INPA/BE_Engine.aspx/getAvalibility"
 
     payload = {
 
-        "hotelID": "22",
+        "hotelID": hotel_id,
 
         "dsn": "",
 
@@ -116,7 +179,7 @@ def _fetch_yarkon_availability_days():
 
     try:
 
-        _log("Requesting availability from API…")
+        _log(f"Requesting availability from API (hotelID={hotel_id})…")
 
         scraper = cloudscraper.create_scraper(
 
@@ -156,7 +219,7 @@ def _fetch_yarkon_availability_days():
 
 
 
-def availability_for_target_dates(target_dates):
+def availability_for_target_dates(target_dates, hotel_id):
 
     """
 
@@ -166,7 +229,7 @@ def availability_for_target_dates(target_dates):
 
     """
 
-    results = _fetch_yarkon_availability_days()
+    results = _fetch_availability_days(hotel_id)
 
     if results is None:
 
@@ -262,11 +325,12 @@ def send_telegram_message(bot_token, chat_id, message):
 
 def main():
 
-    _log("Starting Yarkon availability check")
+    _log("Starting camping availability check")
 
     try:
 
-        bot_token, chat_id, target_dates = load_config()
+        bot_token, chat_id, target_dates, hotel_ids = load_config()
+        hotel_cfgs = {hotel_id: resolve_hotel_config(hotel_id) for hotel_id in hotel_ids}
 
     except ValueError as e:
 
@@ -276,35 +340,41 @@ def main():
 
 
 
-    available, missing = availability_for_target_dates(target_dates)
+    message_sections = []
+    any_available = False
 
-    if available:
+    for hotel_id in hotel_ids:
 
-        lines = [
+        hotel_cfg = hotel_cfgs[hotel_id]
+        _log(f"Checking hotelID={hotel_id} ({hotel_cfg['name']})")
 
-            f"Yarkon camping is available for {d}! (reservations: {r})"
+        available, missing = availability_for_target_dates(target_dates, hotel_id)
 
-            for d, r in available
+        if available:
 
-        ]
+            any_available = True
+            lines = [
 
-        body = "\n".join(lines)
+                f"{hotel_cfg['name']} is available for {d}! (reservations: {r})"
 
-        message = (
+                for d, r in available
 
-            f"{body}\n"
+            ]
+            lines.append(f"Book now: {hotel_cfg['booking_url']}")
+            message_sections.append("\n".join(lines))
 
-            f"Book now: https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-ירקון/"
+        else:
 
-        )
+            dates_joined = ", ".join(missing)
+            message_sections.append(
+                f"{hotel_cfg['name']} has no availability for {dates_joined} :("
+            )
+
+    message = "\n\n".join(message_sections)
+
+    if any_available:
 
         send_telegram_message(bot_token, chat_id, message)
-
-    else:
-
-        dates_joined = ", ".join(missing)
-
-        message = f"Yarkon camping has no availability for {dates_joined} :("
 
     _log(f"Result message: {message}")
 

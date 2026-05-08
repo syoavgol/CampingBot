@@ -2,7 +2,7 @@ name: Yarkon Telegram Alert
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # every 30 minutes (UTC)
+    - cron: '0 5,17 * * *'  # 08:00 and 20:00 Israel time (UTC+3, summer)
   workflow_dispatch:        # manual trigger
 
 jobs:
@@ -28,4 +28,5 @@ jobs:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         TARGET_DATES: ${{ secrets.TARGET_DATES || vars.TARGET_DATES }}
+        HOTEL_ID: ${{ secrets.HOTEL_ID || vars.HOTEL_ID }}
       run: python parksTelegramBot.py
