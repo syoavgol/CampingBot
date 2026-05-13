@@ -9,15 +9,15 @@ from telegram_notifier import send_telegram_message
 
 
 BASE_URL = "https://checkfrontcom.checkfront.com/reserve/inventory/"
-BOOKING_URL = (
-    "https://checkfrontcom.checkfront.com/reserve/"
-    "?inline=1&category_id=96&item_id=367"
-    "&options=category_select%2Chidedates"
-    "&provider=droplet&ssl=1&src=https%3A%2F%2Fwww.parks.org.il"
-)
 
-ITEM_ID = 367
-CATEGORY_ID = 96
+
+def build_booking_url(park_item_id, park_category_id):
+    return (
+        "https://checkfrontcom.checkfront.com/reserve/"
+        f"?inline=1&category_id={park_category_id}&item_id={park_item_id}"
+        "&options=category_select%2Chidedates"
+        "&provider=droplet&ssl=1&src=https%3A%2F%2Fwww.parks.org.il"
+    )
 
 
 def _log(msg):
@@ -26,7 +26,13 @@ def _log(msg):
 
 def load_config():
     """Read env vars with clear logging; exits if required vars are missing."""
-    required = ("TG_BOT_TOKEN", "TG_CHAT_ID", "PARK_VISIT_TARGET_DATES")
+    required = (
+        "TG_BOT_TOKEN",
+        "TG_CHAT_ID",
+        "PARK_VISIT_TARGET_DATES",
+        "PARK_ITEM_ID",
+        "PARK_CATEGORY_ID",
+    )
     missing = [k for k in required if not os.environ.get(k)]
 
     if missing:
@@ -40,11 +46,16 @@ def load_config():
 
     token = os.environ["TG_BOT_TOKEN"]
     chat_id = os.environ["TG_CHAT_ID"]
+    raw_park_item_ids = os.environ["PARK_ITEM_ID"]
+    park_item_ids = _parse_park_item_ids(raw_park_item_ids)
+    park_category_id = _parse_numeric_id(os.environ["PARK_CATEGORY_ID"], "PARK_CATEGORY_ID")
 
     _log(f"TG_BOT_TOKEN present (length {len(token)})")
     _log(f"TG_CHAT_ID present (length {len(chat_id)})")
+    _log(f"PARK_ITEM_ID parsed {len(park_item_ids)} value(s): {park_item_ids}")
+    _log(f"PARK_CATEGORY_ID parsed value: {park_category_id}")
 
-    return token, chat_id, target_dates
+    return token, chat_id, target_dates, park_item_ids, park_category_id
 
 
 def _parse_target_dates(raw):
@@ -68,7 +79,42 @@ def _parse_target_dates(raw):
     return dates
 
 
-def check_availability(target_date: str) -> bool | None:
+def _parse_park_item_ids(raw):
+    park_item_ids = []
+    seen = set()
+
+    for part in raw.split(","):
+        park_item_id = part.strip()
+        if not park_item_id or park_item_id in seen:
+            continue
+
+        if not park_item_id.isdigit():
+            raise ValueError(
+                "PARK_ITEM_ID must list numeric Checkfront item IDs as comma-separated values"
+            )
+
+        seen.add(park_item_id)
+        park_item_ids.append(park_item_id)
+
+    if not park_item_ids:
+        raise ValueError(
+            "PARK_ITEM_ID must list at least one Checkfront item ID as comma-separated values"
+        )
+
+    return park_item_ids
+
+
+def _parse_numeric_id(raw, env_name):
+    value = raw.strip()
+    if not value.isdigit():
+        raise ValueError(f"{env_name} must be a numeric Checkfront ID")
+
+    return value
+
+
+def check_availability(
+    target_date: str, park_item_id: str, park_category_id: str
+) -> bool | None:
     """
     target_date format: YYYY-MM-DD
     returns:
@@ -85,8 +131,8 @@ def check_availability(target_date: str) -> bool | None:
         "header": "hide",
         "options": "category_select,hidedates",
         "src": "https://www.parks.org.il",
-        "filter_item_id": str(ITEM_ID),
-        "filter_category_id": str(CATEGORY_ID),
+        "filter_item_id": park_item_id,
+        "filter_category_id": park_category_id,
         "ssl": "1",
         "provider": "droplet",
         "customer_id": "",
@@ -95,9 +141,9 @@ def check_availability(target_date: str) -> bool | None:
         "date": "",
         "language": "",
         "cacheable": "1",
-        "item_id": str(ITEM_ID),
+        "item_id": park_item_id,
         "view": "",
-        "category_id": str(CATEGORY_ID),
+        "category_id": park_category_id,
         "start_date": target_date,
         "end_date": target_date,
         "cf-month": cf_month,
@@ -107,7 +153,7 @@ def check_availability(target_date: str) -> bool | None:
         "User-Agent": "Mozilla/5.0",
         "Accept": "application/json, text/plain, */*",
         "X-Requested-With": "XMLHttpRequest",
-        "Referer": BOOKING_URL,
+        "Referer": build_booking_url(park_item_id, park_category_id),
     }
 
     with requests.Session() as session:
@@ -124,23 +170,25 @@ def check_availability(target_date: str) -> bool | None:
     return value == 1
 
 
-def availability_for_target_dates(target_dates):
+def availability_for_target_dates(target_dates, park_item_id, park_category_id):
     available = []
     unavailable = []
     not_found = []
 
     for target_date in target_dates:
-        result = check_availability(target_date)
+        result = check_availability(target_date, park_item_id, park_category_id)
 
         if result is True:
             available.append(target_date)
-            _log(f"{target_date}: available")
+            _log(f"park_item_id={park_item_id} {target_date}: available")
         elif result is False:
             unavailable.append(target_date)
-            _log(f"{target_date}: not available")
+            _log(f"park_item_id={park_item_id} {target_date}: not available")
         else:
             not_found.append(target_date)
-            _log(f"{target_date}: not found in returned calendar window")
+            _log(
+                f"park_item_id={park_item_id} {target_date}: not found in returned calendar window"
+            )
 
     return available, unavailable, not_found
 
@@ -149,8 +197,17 @@ def main():
     _log("Starting parks visit availability check")
 
     try:
-        bot_token, chat_id, target_dates = load_config()
-        available, unavailable, not_found = availability_for_target_dates(target_dates)
+        bot_token, chat_id, target_dates, park_item_ids, park_category_id = load_config()
+        results = []
+        for park_item_id in park_item_ids:
+            results.append(
+                (
+                    park_item_id,
+                    *availability_for_target_dates(
+                        target_dates, park_item_id, park_category_id
+                    ),
+                )
+            )
     except ValueError as e:
         _log(f"ERROR: Invalid configuration: {e}")
         sys.exit(1)
@@ -160,26 +217,37 @@ def main():
         sys.exit(1)
 
     message_sections = []
+    has_available_dates = False
 
-    if available:
-        message_sections.append(
-            "Parks visit is available for " + ", ".join(available) + "!"
-        )
-        message_sections.append(f"Book now: {BOOKING_URL}")
+    for park_item_id, available, unavailable, not_found in results:
+        if available:
+            has_available_dates = True
+            message_sections.append(
+                f"Park item {park_item_id} visit is available for "
+                + ", ".join(available)
+                + "!"
+            )
+            message_sections.append(
+                f"Book now: {build_booking_url(park_item_id, park_category_id)}"
+            )
 
-    if unavailable:
-        message_sections.append(
-            "No parks visit availability for " + ", ".join(unavailable) + "."
-        )
+        if unavailable:
+            message_sections.append(
+                f"No park item {park_item_id} visit availability for "
+                + ", ".join(unavailable)
+                + "."
+            )
 
-    if not_found:
-        message_sections.append(
-            "Dates not found in returned calendar window: " + ", ".join(not_found) + "."
-        )
+        if not_found:
+            message_sections.append(
+                f"Park item {park_item_id} dates not found in returned calendar window: "
+                + ", ".join(not_found)
+                + "."
+            )
 
     message = "\n\n".join(message_sections)
 
-    if available:
+    if has_available_dates:
         send_telegram_message(bot_token, chat_id, message, log=_log)
 
     _log(f"Result message: {message}")

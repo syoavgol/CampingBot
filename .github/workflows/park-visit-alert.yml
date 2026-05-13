@@ -23,9 +23,13 @@ jobs:
         pip install requests
 
     # PARK_VISIT_TARGET_DATES: add Actions secret or variable named PARK_VISIT_TARGET_DATES (comma-separated YYYY-MM-DD)
+    # PARK_ITEM_ID: add Actions secret or variable named PARK_ITEM_ID (comma-separated Checkfront item IDs)
+    # PARK_CATEGORY_ID: add Actions secret or variable named PARK_CATEGORY_ID
     - name: Run script
       env:
         TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         PARK_VISIT_TARGET_DATES: ${{ secrets.PARK_VISIT_TARGET_DATES || vars.PARK_VISIT_TARGET_DATES }}
+        PARK_ITEM_ID: ${{ secrets.PARK_ITEM_ID || vars.PARK_ITEM_ID }}
+        PARK_CATEGORY_ID: ${{ secrets.PARK_CATEGORY_ID || vars.PARK_CATEGORY_ID }}
       run: python parksVisitTelegramBot.py
