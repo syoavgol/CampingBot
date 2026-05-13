@@ -4,11 +4,11 @@ from datetime import datetime
 
 import os
 
-import requests
-
 import sys
 
 import traceback
+
+from telegram_notifier import send_telegram_message
 
 
 
@@ -57,7 +57,7 @@ def load_config():
 
     """Read env vars with clear logging; exits if required vars are missing."""
 
-    required = ("TG_BOT_TOKEN", "TG_CHAT_ID", "TARGET_DATES", "HOTEL_ID")
+    required = ("TG_BOT_TOKEN", "TG_CHAT_ID", "CAMPING_TARGET_DATES", "HOTEL_ID")
 
     missing = [k for k in required if not os.environ.get(k)]
 
@@ -69,9 +69,9 @@ def load_config():
 
 
 
-    raw_dates = os.environ["TARGET_DATES"]
+    raw_dates = os.environ["CAMPING_TARGET_DATES"]
 
-    _log(f"TARGET_DATES raw length={len(raw_dates)} character(s)")
+    _log(f"CAMPING_TARGET_DATES raw length={len(raw_dates)} character(s)")
 
     target_dates = _parse_target_dates(raw_dates)
 
@@ -116,7 +116,7 @@ def _parse_target_dates(raw):
 
         raise ValueError(
 
-            "TARGET_DATES must list at least one date as comma-separated YYYY-MM-DD values"
+            "CAMPING_TARGET_DATES must list at least one date as comma-separated YYYY-MM-DD values"
 
         )
 
@@ -287,42 +287,6 @@ def availability_for_target_dates(target_dates, hotel_id):
 
 
 
-def send_telegram_message(bot_token, chat_id, message):
-
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-
-    payload = {
-
-        "chat_id": chat_id,
-
-        "text": message
-
-    }
-
-    _log("Sending Telegram notification…")
-
-    r = requests.post(url, data=payload, timeout=30)
-
-    ok = r.status_code == 200
-
-    if ok:
-
-        _log("Telegram send OK (HTTP 200)")
-
-    else:
-
-        _log(f"Telegram send failed: HTTP {r.status_code}")
-
-        preview = (r.text or "")[:500].replace("\r", " ").replace("\n", " ")
-
-        _log(f"Telegram response preview: {preview!r}")
-
-    return ok
-
-
-
-
-
 def main():
 
     _log("Starting camping availability check")
@@ -374,7 +338,7 @@ def main():
 
     if any_available:
 
-        send_telegram_message(bot_token, chat_id, message)
+        send_telegram_message(bot_token, chat_id, message, log=_log)
 
     _log(f"Result message: {message}")
 
