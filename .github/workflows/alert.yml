@@ -7,6 +7,9 @@ on:
 
 jobs:
   run-script:
+    # Set repository variable ENABLE_CAMPING_ALERT to "false" to skip scheduled runs.
+    # workflow_dispatch always runs so you can test without changing the flag.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.ENABLE_CAMPING_ALERT != 'false' }}
     runs-on: ubuntu-latest
 
     steps:

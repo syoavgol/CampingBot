@@ -19,6 +19,10 @@ HOTEL_CONFIGS = {
         "name": "חורשת טל",
         "booking_url": "https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-חורשת-טל/",
     },
+    "15": {
+        "name": "מעיין חרוד",
+        "booking_url": "https://www.parks.org.il/camping/חניון-לילה-גן-לאומי-מעיין-חרוד/",
+    },
     "20": {
         "name": "הקסטל",
         "booking_url": "https://www.parks.org.il/camping/חניון-לילה-הקסטל/",
