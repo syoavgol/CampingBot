@@ -2,7 +2,7 @@ name: Yarkon Telegram Alert
 
 on:
   schedule:
-    - cron: '0 5,17 * * *'  # 08:00 and 20:00 Israel time (UTC+3, summer)
+    - cron: '0 * * * *'  # runs every hour
   workflow_dispatch:        # manual trigger
 
 jobs:
